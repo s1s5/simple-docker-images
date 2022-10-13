@@ -8,6 +8,7 @@ packages = [{include = "simple_docker_images"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+dropbox = "^11.35.0"
 
 
 [build-system]

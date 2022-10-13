@@ -1,6 +1,7 @@
 import hashlib
 import io
 import os
+import sys
 from typing import IO, Iterable, Iterator, Optional
 
 import dropbox
@@ -58,7 +59,7 @@ class Reader:
         return self.content_hash.hexdigest()
 
 
-def upload_to_dropbox(dbx: dropbox.Dropbox, dbx_target_path: str, f):
+def upload_to_dropbox(dbx: dropbox.Dropbox, dbx_target_path: str, f, overwrite: bool):
     chunk_size = 4 * 1024 * 1024
 
     reader = Reader(f, chunk_size)
@@ -67,7 +68,10 @@ def upload_to_dropbox(dbx: dropbox.Dropbox, dbx_target_path: str, f):
     cursor = dropbox.files.UploadSessionCursor(
         session_id=sr.session_id, offset=reader.pos
     )
-    commit = dropbox.files.CommitInfo(path=dbx_target_path)
+    kwargs = {}
+    if overwrite:
+        kwargs["mode"] = dropbox.files.WriteMode.overwrite
+    commit = dropbox.files.CommitInfo(path=dbx_target_path, **kwargs)
 
     while chunk := reader.get():
         dbx.files_upload_session_append(chunk, cursor.session_id, cursor.offset)
@@ -84,6 +88,7 @@ def main(
     dropbox_token: Optional[str],
     dropbox_token_envvar: Optional[str],
     target_path: str,
+    overwrite: bool,
 ):
     session = requests.Session()
     adapter = HTTPAdapter(
@@ -100,7 +105,7 @@ def main(
     dropbox_token = dropbox_token or os.environ.get(dropbox_token_envvar or "") or ""
 
     dbx = dropbox.Dropbox(dropbox_token, session=session)
-    upload_to_dropbox(dbx, target_path, src_file)
+    upload_to_dropbox(dbx, target_path, src_file, overwrite=overwrite)
 
 
 def __entry_point():
@@ -109,10 +114,13 @@ def __entry_point():
     parser = argparse.ArgumentParser(
         description="",  # プログラムの説明
     )
-    parser.add_argument("-s", "--src-file", type=argparse.FileType("rb"))
+    parser.add_argument(
+        "-s", "--src-file", type=argparse.FileType("rb"), default=sys.stdin.buffer
+    )
     parser.add_argument("-d", "--target-path")
     parser.add_argument("-t", "--dropbox-token")
     parser.add_argument("-e", "--dropbox-token-envvar")
+    parser.add_argument("--overwrite", action="store_true")
     main(**dict(parser.parse_args()._get_kwargs()))
 
 
