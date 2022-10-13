@@ -35,3 +35,6 @@ gzip
 ## aws upload file
 upload to aws
 - ```docker run --rm -i --entrypoint=/bin/sh amazon/aws-cli -c "cat file | aws s3 cp - s3://bucket/path"```
+
+## aws download file
+- `docker run --rm -i amazon/aws-cli s3 cp s3://bucket/path -`
