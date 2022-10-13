@@ -18,22 +18,23 @@ MAX_RETRY = 3
 QueueItem = Optional[Tuple[str, IO[bytes]]] | StopIteration
 
 
-def create_tar(t: tarfile.TarFile, q: Queue[QueueItem]):
-    while True:
-        v = q.get()
-        if v is None:
-            continue
-        elif isinstance(v, StopIteration):
-            return
-        path, ntf = v
-        with contextlib.closing(ntf), open(ntf.name, "rb") as fp:
-            tf = tarfile.TarInfo(path)
+def create_tar(dst_file: IO[bytes], q: Queue[QueueItem]):
+    with tarfile.open(fileobj=dst_file, mode="w|") as t:
+        while True:
+            v = q.get()
+            if v is None:
+                continue
+            elif isinstance(v, StopIteration):
+                return
+            path, ntf = v
+            with contextlib.closing(ntf), open(ntf.name, "rb") as fp:
+                tf = tarfile.TarInfo(path)
 
-            fp.seek(0, os.SEEK_END)
-            tf.size = fp.tell()
-            fp.seek(0, os.SEEK_SET)
+                fp.seek(0, os.SEEK_END)
+                tf.size = fp.tell()
+                fp.seek(0, os.SEEK_SET)
 
-            t.addfile(tf, fileobj=fp)
+                t.addfile(tf, fileobj=fp)
 
 
 def download_file(s3, bucket: str, key: str, dst_path: str, q: Queue[QueueItem]):
@@ -113,35 +114,30 @@ def main(
 
     object_response_paginator = s3.get_paginator("list_objects")
 
-    with tarfile.open(fileobj=dst_file, mode="w") as t:
-        q: Queue[QueueItem] = Queue()
-        with ThreadPoolExecutor(max_workers=32) as executor:
-            create_tar_task = executor.submit(create_tar, t, q)
-            download_tasks = []
-            for object_response_itr in object_response_paginator.paginate(
-                Bucket=bucket, Prefix=prefix
-            ):
-                for obj in object_response_itr.get("Contents", []):
-                    last_modified = obj["LastModified"]
-                    if last_modified < threshold:
-                        continue
+    q: Queue[QueueItem] = Queue()
+    with ThreadPoolExecutor(max_workers=32) as executor:
+        executor.submit(create_tar, dst_file, q)
 
-                    dst_path = tar_path_prefix + os.path.relpath(
-                        obj["Key"], start=prefix
-                    )
+        download_tasks = []
+        for object_response_itr in object_response_paginator.paginate(
+            Bucket=bucket, Prefix=prefix
+        ):
+            for obj in object_response_itr.get("Contents", []):
+                last_modified = obj["LastModified"]
+                if last_modified < threshold:
+                    continue
 
-                    download_tasks.append(
-                        executor.submit(
-                            download_file, s3, bucket, obj["Key"], dst_path, q
-                        )
-                    )
-            # wait all download complete
-            try:
-                for i in download_tasks:
-                    i.result()
-            finally:
-                q.put(StopIteration())
-                create_tar_task.result()
+                dst_path = tar_path_prefix + os.path.relpath(obj["Key"], start=prefix)
+
+                download_tasks.append(
+                    executor.submit(download_file, s3, bucket, obj["Key"], dst_path, q)
+                )
+        # wait all download complete
+        try:
+            for i in download_tasks:
+                i.result()
+        finally:
+            q.put(StopIteration())
 
 
 def __entry_point():
