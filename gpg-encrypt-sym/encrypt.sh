@@ -39,5 +39,10 @@ fi
 mkdir -p ${TEMPORARY_DIR}
 chown $(id -u):$(id -g) ${TEMPORARY_DIR}
 chmod 700 ${TEMPORARY_DIR}
-echo -n ${KEY} | gpg --homedir ${TEMPORARY_DIR} --batch --no-tty -o ${OUTPUT} --cipher-algo AES256 --passphrase-fd 0 -c ${INPUT}
+
+echo -n ${KEY} > ${TEMPORARY_DIR}/sym-phrase
+chmod 400 ${TEMPORARY_DIR}/sym-phrase
+
+gpg --pinentry-mode loopback --homedir ${TEMPORARY_DIR} --passphrase-fd 3 --batch --no-tty -o - --cipher-algo AES256 -c 3< ${TEMPORARY_DIR}/sym-phrase < ${INPUT}  > ${OUTPUT}
+
 rm -rf ${TEMPORARY_DIR}
