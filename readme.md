@@ -13,7 +13,7 @@ Download from s3 and tar all files whose path starts with prefix
 
 ## gpg-encrypt-asym
 encrypt data with public key
-- ``` docker run --rm -v `pwd`:/work -w /work -t -i s1s5/gpg-encrypt-asym -i a.txt -o a.txt.gpg -k pub.key ```
+- ``` docker run --rm -u `id -u`:`id -g` -v `pwd`:/work -w /work -t -i s1s5/gpg-encrypt-asym -i a.txt -o a.txt.gpg -k pub.key ```
 
 ### export public key
 how to export public key
@@ -21,7 +21,11 @@ how to export public key
 
 ## gpg-encrypt-sym
 encrypt data with AES256
-- ``` docker run --rm -v `pwd`:/work -w /work -t -i s1s5/gpg-encrypt-asym -i a.txt -o a.txt.gpg -k complex-password ```
+- ``` docker run --rm -u `id -u`:`id -g` -v `pwd`:/work -w /work -t -i s1s5/gpg-encrypt-sym -i a.txt -o a.txt.gpg -k complex-password ```
+
+## gpg-encrypt-sym
+decrypt data
+- ``` docker run --rm -u `id -u`:`id -g` -v `pwd`:/work -w /work -t -i --entrypoint /opt/decrypt.sh s1s5/gpg-encrypt-sym -i a.txt.gpg -o a.txt.gpg.decrypted -k complex-password ```
 
 # other images
 ## postgres backup
@@ -37,4 +41,4 @@ upload to aws
 - ```docker run --rm -i --entrypoint=/bin/sh amazon/aws-cli -c "cat file | aws s3 cp - s3://bucket/path"```
 
 ## aws download file
-- `docker run --rm -i amazon/aws-cli s3 cp s3://bucket/path -`
+- `docker run --rm -i amazon/aws-cli s3 cp s3://bucket/path - > ./out.txt`
