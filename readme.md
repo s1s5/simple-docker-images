@@ -27,6 +27,14 @@ encrypt data with AES256
 decrypt data
 - ``` docker run --rm -u `id -u`:`id -g` -v `pwd`:/work -w /work -t -i --entrypoint /opt/decrypt.sh s1s5/gpg-encrypt-sym -i a.txt.gpg -o a.txt.gpg.decrypted -k complex-password ```
 
+## gql-schema-dumper
+export graphql schema from url.
+- ```docker run --rm -t -i s1s5/gql-schema-dumper --url http://graphql.example.com/graphql --output /tmp/schema.graphql --watch /work```
+
+## rover-supergraph-compose
+create supergraph schema for apollo router
+- ```docker run --rm -t -i -e APOLLO_ELV2_LICENSE=accept -e APOLLO_TELEMETRY_DISABLED=1 -v `pwd`/federation/:/work s1s5/rover-supergraph-compose --config /work/supergraph-config.yml  --output /work/supergraph.graphql``
+
 # other images
 ## postgres backup
 - DATABASE_URL=psql://user:password@host:port/db
