@@ -23,7 +23,7 @@ how to export public key
 encrypt data with AES256
 - ``` docker run --rm -u `id -u`:`id -g` -v `pwd`:/work -w /work -t -i s1s5/gpg-encrypt-sym -i a.txt -o a.txt.gpg -k complex-password ```
 
-## gpg-encrypt-sym
+### decrypt
 decrypt data
 - ``` docker run --rm -u `id -u`:`id -g` -v `pwd`:/work -w /work -t -i --entrypoint /opt/decrypt.sh s1s5/gpg-encrypt-sym -i a.txt.gpg -o a.txt.gpg.decrypted -k complex-password ```
 
