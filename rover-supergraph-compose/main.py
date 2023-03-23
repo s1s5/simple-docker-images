@@ -1,5 +1,7 @@
+import hashlib
 import os
 import subprocess
+from typing import Optional
 
 import click
 import watchfiles
@@ -18,7 +20,8 @@ def parse_file(config_filename: str):
             result.append(path)
     return result
 
-def dump_supergraph(config: str, output: str):
+
+def dump_supergraph(config: str, output: str, olddigest: Optional[str]):
     p = subprocess.Popen(
         ["rover", "supergraph", "compose", "--config", config],
         stdout=subprocess.PIPE
@@ -26,26 +29,46 @@ def dump_supergraph(config: str, output: str):
     p.wait()
 
     stdout, _ = p.communicate()
+    digest = hashlib.sha256(stdout).hexdigest()
 
-    with open(output, "wb") as fp:
-        fp.write(stdout)
+    if digest != olddigest:
+        print(f"digest changed {output} update")
+        with open(output, "wb") as fp:
+            fp.write(stdout)
+    else:
+        print(f"no changes found for {output}")
+
+    return digest
 
 
 @click.command()
 @click.option("--config", help="config path")
 @click.option("--output", help="output path")
-def auto_reload(config: str, output: str):
-    dump_supergraph(config, output)
+@click.option("--poll-ms", help="poll ms", type=int, default=0)
+def auto_reload(config: str, output: str, poll_ms: int):
+    kwargs = {}
+    if poll_ms > 0:
+        kwargs["rust_timeout"] = poll_ms
+        kwargs["yield_on_timeout"] = True
+
+    if os.path.exists(output):
+        with open(output, "rb") as fp:
+            digest = hashlib.sha256(fp.read()).hexdigest()
+    else:
+        digest = None
 
     while True:
-        paths = parse_file(config)
+        digest = dump_supergraph(config, output, olddigest=digest)
 
-        for changes in watchfiles.watch(*paths):
+        paths = parse_file(config)
+        print(f"watching {paths}")
+
+        for changes in watchfiles.watch(*paths, **kwargs):
             changed_paths = [path for _, path in changes]
+            print(f"found changes {changed_paths}. reload={config not in changed_paths}")
             if config in changed_paths:
                 break
-            dump_supergraph(config, output)
-            
+            digest = dump_supergraph(config, output, olddigest=digest)
 
 
 if __name__ == "__main__":
