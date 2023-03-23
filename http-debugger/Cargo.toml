@@ -1,0 +1,40 @@
+[package]
+name = "http-debugger"
+version = "0.1.0"
+edition = "2021"
+default-run = "http-debugger"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+hyper = { version = "1.0.0-rc.3", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
+http-body-util = "0.1.0-rc.2"
+url = "2"
+reqwest = { version = "0.11", features = ["json"] }
+bytes = "1"
+http = "0.2"
+rustls-native-certs = { version = "0.6", optional = true }
+rustls = { version = "0.20.8", default-features = false }
+tokio-rustls = { version = "0.23", default-features = false }
+futures-util = { version = "0.3.1", default-features = false }
+rustls-pemfile = "1.0.2"
+h2 = "*"
+rcgen = { version = "*", features = ["pem", "x509-parser"] }
+openssl = "*"
+pem = "1"
+ring = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+serde_bytes = "*"
+env_logger = "*"
+log = "*"
+clap = {version = "4", features = ["derive"] }
+
+
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "z"  # Optimize for size.
+strip = true  # Automatically strip symbols from the binary.
