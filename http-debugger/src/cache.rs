@@ -60,7 +60,7 @@ impl Cache {
         referer: &Option<String>,
     ) -> Option<(HashMap<String, String>, Bytes)> {
         let cache_path = self.get_cache_path(uri, referer);
-        println!("get cache {} -> {:?}", uri, &cache_path);
+        // println!("get cache {} -> {:?}", uri, &cache_path);
         let _file_metadata = tokio::fs::metadata(&cache_path).await.ok()?;
         let metadata = read_meta(&cache_path).await.ok()?;
         let file_bytes = read_all(&cache_path).await.ok()?;
@@ -78,7 +78,7 @@ impl Cache {
         res_body: &Bytes,
     ) -> Result<(), std::io::Error> {
         let cache_path = self.get_cache_path(uri, referer);
-        println!("set cache {} -> {:?}", uri, &cache_path);
+        // println!("set cache {} -> {:?}", uri, &cache_path);
         let meta = Meta {
             uri: uri.into(),
             req_headers: req_headers.clone(),

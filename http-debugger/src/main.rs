@@ -1,6 +1,7 @@
 use clap::Parser;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
+use log::{error, info};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -26,6 +27,45 @@ struct Args {
     crt: String,
 }
 
+// async fn signal_stream(
+// ) -> Option<impl futures::stream::Stream<Item = (tokio::signal::unix::SignalKind, ())>> {
+async fn is_shutdown() {
+    use async_stream::stream;
+    use tokio::signal::unix::{signal, SignalKind};
+    use tokio_stream::{StreamExt, StreamMap};
+
+    let signals = vec![SignalKind::interrupt(), SignalKind::terminate()];
+
+    let mut map = StreamMap::new();
+    for sig in signals {
+        match signal(sig) {
+            Ok(signal) => {
+                // let (tx1, mut rx1) = tokio::sync::mpsc::channel::<usize>(10);
+                // tokio::task::spawn(async move {
+                //     loop {
+                //         signal.recv().await;
+                //         tx1.send(0).await;
+                //     }
+                // });
+                map.insert(
+                    sig,
+                    Box::pin(stream! {
+                        let mut signal = signal;
+                        loop {
+                            signal.recv().await;
+                            yield;
+                        }
+                    }),
+                );
+            }
+            Err(e) => error!("Failed to enable `{:?}` shutdown signal: {}", sig, e),
+        }
+    }
+
+    let (_, _) = map.next().await.unwrap();
+    // Some(map)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -36,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     let listener = TcpListener::bind(addr).await?;
-    println!("Listening on http://{}", addr);
+    info!("Listening on http://{}", addr);
 
     let proxy_app = Arc::new(http_debugger::app::ProxyApp::new(
         &PathBuf::from(args.cache),
@@ -44,25 +84,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &args.crt,
     ));
 
-    loop {
-        let (stream, _) = listener.accept().await?;
-        let cloned_pa = proxy_app.clone();
-        tokio::task::spawn(async move {
-            let cm = cloned_pa;
-            let service = service_fn(move |req| {
-                let cm = cm.clone();
-                http_debugger::proxy::upgradable_proxy(req, cm)
-            });
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+    tokio::spawn(async move {
+        is_shutdown().await;
+        match shutdown_tx.send(()) {
+            Ok(_) => {}
+            Err(_) => error!("Error when shutdown send."),
+        }
+    });
 
-            if let Err(err) = http1::Builder::new()
-                .preserve_header_case(true)
-                .title_case_headers(true)
-                .serve_connection(stream, service)
-                .with_upgrades()
-                .await
-            {
-                println!("Failed to serve connection: {:?}", err);
+    tokio::select! {
+        _ = async {
+            loop {
+                let (stream, addr) = match listener.accept().await {
+                    Ok(sock) => sock,
+                    Err(e) => {
+                        error!("Error when accepting {:?}", e);
+                        break;
+                    }
+                };
+                info!("stream : {:?}, addr: {:?}", stream, addr);
+
+                let cloned_pa = proxy_app.clone();
+                tokio::task::spawn(async move {
+                    let cm = cloned_pa;
+                    let service = service_fn(move |req| {
+                        let cm = cm.clone();
+                        http_debugger::proxy::upgradable_proxy(req, cm)
+                    });
+
+                    if let Err(err) = http1::Builder::new()
+                        .preserve_header_case(true)
+                        .title_case_headers(true)
+                        .serve_connection(stream, service)
+                        .with_upgrades()
+                        .await
+                    {
+                        println!("Failed to serve connection: {:?}", err);
+                    }
+                });
             }
-        });
+            Ok::<(), Box<dyn std::error::Error>>(())
+        } => {}
+        _ = shutdown_rx => {
+           info!("shutting down!");
+        }
     }
+
+    Ok(())
 }

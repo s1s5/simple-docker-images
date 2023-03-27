@@ -10,3 +10,5 @@
 ```
 docker run --name http-debugger --rm -u `id -u`:`id -g` --rm -p 8100:8100 -v `pwd`/certs:/certs -v /tmp/http-debugger-cache:/tmp/http-debugger-cache s1s5/http-debugger --cache /tmp/http-debugger-cache --key /certs/root-ca.key  --crt /certs/root-ca.crt
 ```
+
+`cargo watch -s "mold -run cargo run -- --cache /tmp/http-debugger-cache --key ./certs/root-ca.key  --crt ./certs/root-ca.crt`

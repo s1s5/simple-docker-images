@@ -29,8 +29,9 @@ serde_bytes = "*"
 env_logger = "*"
 log = "*"
 clap = {version = "4", features = ["derive"] }
-
-
+tokio-stream = "*"
+futures = "*"
+async-stream = "*"
 
 [profile.release]
 panic = "abort"

@@ -6,6 +6,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::upgrade::Upgraded;
 use hyper::{Method, Request, Response};
+use log::info;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -14,7 +15,7 @@ pub async fn proxy(
     base_uri: Option<String>,
     proxy_app: Arc<ProxyApp>,
 ) -> Result<Response<Full<Bytes>>, Box<dyn std::error::Error + Send + Sync>> {
-    println!("proxy req: {:?}, base: {:?}", req, base_uri);
+    info!("proxy req: {:?}, base: {:?}", req, base_uri);
 
     let (res_headers, res_body) = {
         let uri = format!("{}{}", base_uri.unwrap_or("".into()), req.uri());
