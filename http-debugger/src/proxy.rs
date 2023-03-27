@@ -6,7 +6,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::upgrade::Upgraded;
 use hyper::{Method, Request, Response};
-use log::info;
+use log::{error, info};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -41,104 +41,12 @@ pub async fn proxy(
     });
 
     Ok(ret)
-
-    // println!(
-    //     "req: {:?}, path={}, base_uri={:?}",
-    //     req,
-    //     req.uri().path(),
-    //     base_uri
-    // );
-
-    // println!("request = {:?}", req);
-    // if req.method() == hyper::Method::CONNECT {
-    //     return Ok(Response::new(Full::new(Bytes::from(
-    //         "connection established",
-    //     ))));
-    // }
-
-    // let client = reqwest::Client::new();
-
-    // // let resp = client
-    // //     .request(reqwest::Method::GET, "https://google.co.jp")
-    // //     .send()
-    // //     .await?
-    // //     .json::<std::collections::HashMap<String, String>>()
-    // //     .await?;
-    // // println!("test: {:#?}", resp);
-
-    // let mut headers = reqwest::header::HeaderMap::new();
-    // req.headers().iter().for_each(|(key, value)| {
-    //     if key.as_str().to_lowercase() != "host" {
-    //         headers.insert(key, value.into());
-    //     }
-    // });
-    // // println!("scheme: {:?}", req.uri().scheme());
-    // let method = req.method().clone();
-    // // let uri = req.uri().to_string();
-    // // let uri = if uri.ends_with(":443") {
-    // //     format!("https://{}", &uri[..uri.len() - 4])
-    // // } else {
-    // //     uri
-    // // };
-    // let uri = format!("{}{}", base_uri.unwrap_or("".into()), req.uri());
-    // let bytes = req.collect().await?.to_bytes();
-    // println!(
-    //     "connect: method={:?}, uri={:?}, headers={:?}, body={:?}",
-    //     method, uri, headers, bytes
-    // );
-    // let response = client
-    //     .request(method, uri)
-    //     .headers(headers)
-    //     .body(bytes)
-    //     .send()
-    //     .await?;
-    // println!("response = {:?}", response);
-
-    // let headers: HeaderMap<HeaderValue> = response.headers().clone();
-
-    // let mut ret = Response::new(Full::new(Bytes::from(response.bytes().await?)));
-
-    // headers.iter().for_each(|(key, value)| {
-    //     ret.headers_mut().append(key, value.into());
-    // });
-
-    // Ok(ret)
-
-    // Ok(Response::new(Full::new(Bytes::from("Hello World!"))))
-
-    // let host = req.uri().host().expect("uri has no host");
-    // let port = req.uri().port_u16().unwrap_or(80);
-    // let addr = format!("{}:{}", host, port);
-
-    // let stream = TcpStream::connect(addr).await.unwrap();
-
-    // let (mut sender, conn) = hyper::client::conn::http1::Builder::new()
-    //     .preserve_header_case(true)
-    //     .title_case_headers(true)
-    //     .handshake(stream)
-    //     .await?;
-    // tokio::task::spawn(async move {
-    //     if let Err(err) = conn.await {
-    //         println!("Connection failed: {:?}", err);
-    //     }
-    // });
-
-    // let resp = sender.send_request(req).await?;
-    // Ok(resp.map(|b| b.boxed()))
 }
 
 pub async fn upgradable_proxy(
     req: Request<hyper::body::Incoming>,
     proxy_app: Arc<ProxyApp>,
 ) -> Result<Response<Full<Bytes>>, Box<dyn std::error::Error + Send + Sync>> {
-    // println!(
-    //     "req: {:?}, host={:?}, port={:?}, path={:?}",
-    //     req,
-    //     req.uri().host(),
-    //     req.uri().port_u16(),
-    //     req.uri().path()
-    // );
-
     if Method::CONNECT == req.method() {
         // Received an HTTP request like:
         // ```
@@ -161,44 +69,22 @@ pub async fn upgradable_proxy(
                 match hyper::upgrade::on(req).await {
                     Ok(upgraded) => {
                         if let Err(e) = tunnel(upgraded, proxy_app, domain, port).await {
-                            eprintln!("server io error: {}", e);
+                            error!("server io error: {}", e);
                         };
                     }
-                    Err(e) => eprintln!("upgrade error: {}", e),
+                    Err(e) => error!("upgrade error: {}", e),
                 }
             });
 
-            // Ok(Response::new(empty()))
             Ok(Response::new(Full::new(Bytes::from(""))))
         } else {
-            eprintln!("CONNECT host is not socket addr: {:?}", req.uri());
-            // let mut resp = Response::new(full("CONNECT must be to a socket address"));
-            // *resp.status_mut() = http::StatusCode::BAD_REQUEST;
-            //
-            // Ok(resp)
-
+            error!("CONNECT host is not socket addr: {:?}", req.uri());
             Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid host").into())
         }
     } else {
         proxy(req, None, proxy_app).await
     }
 }
-
-// fn host_addr(uri: &http::Uri) -> Option<String> {
-//     uri.authority().and_then(|auth| Some(auth.to_string()))
-// }
-
-// fn empty() -> BoxBody<Bytes, hyper::Error> {
-//     Empty::<Bytes>::new()
-//         .map_err(|never| match never {})
-//         .boxed()
-// }
-
-// fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
-//     Full::new(chunk.into())
-//         .map_err(|never| match never {})
-//         .boxed()
-// }
 
 async fn tunnel(
     upgraded: Upgraded,
@@ -229,7 +115,7 @@ async fn tunnel(
             .with_upgrades()
             .await
         {
-            // println!("Failed to serve connection: {:?}", err);
+            // do nothing
         }
     });
 

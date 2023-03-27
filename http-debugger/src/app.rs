@@ -2,6 +2,7 @@ use super::cache::Cache;
 use super::cert_manager::CertManager;
 use bytes::Bytes;
 use http::{HeaderName, HeaderValue};
+use log::info;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -34,6 +35,11 @@ impl ProxyApp {
         let referer = headers.get("referer").map(|x| x.clone());
         if method == http::Method::GET {
             if let Some(res) = self.cache.get(&uri, &referer).await {
+                info!(
+                    "return from cache uri={} referer={:?}",
+                    uri,
+                    referer.unwrap_or("".to_string())
+                );
                 return Ok(res);
             }
         }

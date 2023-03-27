@@ -32,4 +32,5 @@ ARG APP_NAME
 WORKDIR /app
 COPY --from=builder /home/rust/target/x86_64-unknown-linux-musl/release/$APP_NAME .
 
+ENV RUST_LOG info
 ENTRYPOINT [ "./http-debugger" ]

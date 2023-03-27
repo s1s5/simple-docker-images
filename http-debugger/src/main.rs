@@ -27,8 +27,6 @@ struct Args {
     crt: String,
 }
 
-// async fn signal_stream(
-// ) -> Option<impl futures::stream::Stream<Item = (tokio::signal::unix::SignalKind, ())>> {
 async fn is_shutdown() {
     use async_stream::stream;
     use tokio::signal::unix::{signal, SignalKind};
@@ -40,13 +38,6 @@ async fn is_shutdown() {
     for sig in signals {
         match signal(sig) {
             Ok(signal) => {
-                // let (tx1, mut rx1) = tokio::sync::mpsc::channel::<usize>(10);
-                // tokio::task::spawn(async move {
-                //     loop {
-                //         signal.recv().await;
-                //         tx1.send(0).await;
-                //     }
-                // });
                 map.insert(
                     sig,
                     Box::pin(stream! {
@@ -63,11 +54,13 @@ async fn is_shutdown() {
     }
 
     let (_, _) = map.next().await.unwrap();
+    // Option<impl futures::stream::Stream<Item = (tokio::signal::unix::SignalKind, ())>>
     // Some(map)
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
     let args = Args::parse();
 
     let addr = SocketAddr::from((
