@@ -32,6 +32,9 @@ ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
+ENV RUST_LOG=debug
+ENV RUST_BACKTRACE=full
+
 # mount project/ => /usr/src
 COPY ./entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/tini", "--", "/entrypoint.sh"]
