@@ -21,11 +21,13 @@ RUN cargo install sea-orm-cli
 RUN rustup component add rustfmt
 
 # usr for dev
-ENV USER_NAME=dev
-ENV GROUP_NAME=dev
 ENV USER_ID=1000
 ENV GROUP_ID=1000
+ENV HOME=/home/dev
+ENV CARGO_HOME=/home/dev/.cargo
 
+RUN mkdir -p /home/dev/.cargo
+VOLUME /home/dev/.cargo
 WORKDIR /usr/src
 
 ENV TINI_VERSION v0.19.0
