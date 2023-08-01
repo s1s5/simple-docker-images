@@ -6,11 +6,11 @@ upload file to dropbox
 
 ## dropbox-download
 download file from dropbox
-- `docker run --rm -i s1s5/dropbox-download python main.py -t dropbox_token -s /dropbox/path > filename`
+- `docker run --rm -i s1s5/dropbox-download -t dropbox_token -s /dropbox/path > filename`
 
 ## s3-download-to-tar
 Download from s3 and tar all files whose path starts with prefix
-- `docker run --rm -i s1s5/s3-download-to-tar python main.py --base-url s3://bucket/prefix/ --aws-access-key-id AKIA*** --aws-secret-access-key *** > ./out.tar`
+- `docker run --rm -i s1s5/s3-download-to-tar --base-url s3://bucket/prefix/ --aws-access-key-id AKIA*** --aws-secret-access-key *** > ./out.tar`
 
 ## gpg-encrypt-asym
 encrypt data with public key
