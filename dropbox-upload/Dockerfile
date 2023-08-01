@@ -9,3 +9,4 @@ RUN mkdir -p /opt
 WORKDIR /opt
 COPY main.py ./
 
+ENTRYPOINT ["python", "main.py"]

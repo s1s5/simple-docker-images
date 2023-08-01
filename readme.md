@@ -1,7 +1,8 @@
 # custom images
 ## dropbox-upload
 upload file to dropbox
-- `docker run --rm -i s1s5/dropbox-upload python main.py -t dropbox_token -d /dropbox/path < filename`
+- `docker run --rm -i s1s5/dropbox-upload -t dropbox_token -d /dropbox/path < filename`
+- `tar czvf - -C directory ./ | docker run --rm -i s1s5/dropbox-upload -t dropbox_token -d /dropbox-path.tar.gz`
 
 ## dropbox-download
 download file from dropbox
