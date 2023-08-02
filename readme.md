@@ -18,7 +18,13 @@ encrypt data with public key
 
 ### export public key
 how to export public key
+- `gpg --armor --export KEY_ID > pub.key`
+
+how to export private key
 - `gpg --armor --export-secret-keys KEY_ID > pub.key`
+
+### decrypt file
+- `gpg --output DRCRYPTED_FILE --decrypt ENCRYPTED_FILE`
 
 ## gpg-encrypt-sym
 encrypt data with AES256

@@ -1,6 +1,6 @@
-FROM alpine:20220715
+FROM alpine:20230329
 
-RUN apk --no-cache add bash gnupg haveged tini
+RUN apk --no-cache add bash gnupg haveged tini bash
 
 COPY encrypt.sh /opt/encrypt.sh
 RUN chmod +x /opt/encrypt.sh

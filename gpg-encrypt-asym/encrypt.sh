@@ -1,7 +1,9 @@
 #!/bin/bash
 # -*- mode: shell-script -*-
 
+
 set -eu  # <= 0以外が返るものがあったら止まる, 未定義の変数を使おうとしたときに打ち止め
+set -x
 
 TEMPORARY_DIR=/tmp/gnupg-`date '+%Y-%m/%Y-%m-%d_%H-%M-%S'`
 INPUT=
@@ -31,10 +33,12 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
 if [ ${INPUT} = "" ] ||  [ ${OUTPUT} = "" ] ||  [ ${KEY_PATH} = "" ]; then
    echo "input, output, publick_key must be specified"
    exit 1
 fi
+
 
 mkdir -p ${TEMPORARY_DIR}
 chown $(id -u):$(id -g) ${TEMPORARY_DIR}
