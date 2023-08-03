@@ -20,7 +20,7 @@ def main(
 ):
     logging.basicConfig(
         level=logging.INFO,
-        handlers=[logging.StreamHandler(sys.stdout)],
+        handlers=[logging.StreamHandler(sys.stderr)],
         format="%(asctime)s [%(levelname)s] %(name)s / %(message)s"
     )
 
@@ -88,7 +88,6 @@ def __entry_point():
     parser.add_argument("--aws-secret-access-key")
     parser.add_argument("--region-name")
     parser.add_argument("--endpoint-url")
-    parser.add_argument("--timedelta-hours", type=int, default=100 * 365 * 24)
     parser.add_argument(
         "-d", "--dst-file", type=argparse.FileType("wb"), default=sys.stdout.buffer
     )
