@@ -51,7 +51,7 @@ def main(
     ttl: int,
     verbose: bool,
 ):
-    logger.addHandler(logging.StreamHandler(sys.stdout))
+    logger.addHandler(logging.StreamHandler(sys.stderr))
     if verbose:
         logger.setLevel(logging.DEBUG)
 

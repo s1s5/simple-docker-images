@@ -1,5 +1,7 @@
 import contextlib
 import datetime
+import fnmatch
+import logging
 import os
 import sys
 import tarfile
@@ -10,12 +12,13 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
-from typing import IO, Optional, Tuple
+from typing import IO, List, Optional, Tuple
 
 import boto3
 
 MAX_RETRY = 3
-QueueItem = Optional[Tuple[str, IO[bytes]]] | StopIteration
+QueueItem = Optional[Tuple[str, float, IO[bytes]]] | StopIteration
+logger = logging.getLogger(__name__)
 
 
 def create_tar(dst_file: IO[bytes], q: Queue[QueueItem]):
@@ -26,7 +29,8 @@ def create_tar(dst_file: IO[bytes], q: Queue[QueueItem]):
                 continue
             elif isinstance(v, StopIteration):
                 return
-            path, ntf = v
+            path, mtime, ntf = v
+            logger.debug("path=%s, ntf=%s", path, ntf)
             with contextlib.closing(ntf), open(ntf.name, "rb") as fp:
                 tf = tarfile.TarInfo(path)
 
@@ -34,10 +38,14 @@ def create_tar(dst_file: IO[bytes], q: Queue[QueueItem]):
                 tf.size = fp.tell()
                 fp.seek(0, os.SEEK_SET)
 
+                tf.mtime = mtime
+
                 t.addfile(tf, fileobj=fp)
 
 
-def download_file(s3, bucket: str, key: str, dst_path: str, q: Queue[QueueItem]):
+def download_file(
+    s3, bucket: str, key: str, dst_path: str, mtime: int, q: Queue[QueueItem]
+):
     ntf = None
     result: QueueItem = None
     try:
@@ -52,7 +60,14 @@ def download_file(s3, bucket: str, key: str, dst_path: str, q: Queue[QueueItem])
                 time.sleep(3 + try_cnt * 3)
                 continue
 
-        result = (dst_path, ntf)
+        logger.debug(
+            "Download completed: bucket=%s, key=%s, dst_path=%s, ntf=%s",
+            bucket,
+            key,
+            dst_path,
+            ntf,
+        )
+        result = (dst_path, mtime, ntf)
     except Exception:
         if ntf:
             ntf.close()
@@ -71,7 +86,13 @@ def main(
     endpoint_url: Optional[str],
     timedelta_hours: int,
     dst_file: IO[bytes],
+    exclude: List[str],
+    verbose: bool,
 ):
+    logger.addHandler(logging.StreamHandler(sys.stderr))
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+
     parsed = urllib.parse.urlparse(base_url)
     bucket = parsed.hostname
     prefix = parsed.path.lstrip("/")
@@ -127,17 +148,27 @@ def main(
                 if last_modified < threshold:
                     continue
 
-                dst_path = tar_path_prefix + os.path.relpath(obj["Key"], start=prefix)
+                rel_path = os.path.relpath(obj["Key"], start=prefix)
+                if rel_path == "." or any(
+                    [fnmatch.fnmatch(rel_path, x) for x in exclude]
+                ):
+                    continue
+                dst_path = tar_path_prefix + rel_path
+                mtime = obj["LastModified"].timestamp()
 
                 download_tasks.append(
-                    executor.submit(download_file, s3, bucket, obj["Key"], dst_path, q)
+                    executor.submit(
+                        download_file, s3, bucket, obj["Key"], dst_path, mtime, q
+                    )
                 )
         # wait all download complete
+        logger.info("waiting all downloads")
         try:
             for i in download_tasks:
                 i.result()
         finally:
             q.put(StopIteration())
+        logger.info("download completed. waiting create tar file")
 
 
 def __entry_point():
@@ -156,6 +187,8 @@ def __entry_point():
     parser.add_argument(
         "-d", "--dst-file", type=argparse.FileType("wb"), default=sys.stdout.buffer
     )
+    parser.add_argument("--exclude", action="append", default=[])
+    parser.add_argument("--verbose", action="store_true")
 
     main(**dict(parser.parse_args()._get_kwargs()))
 

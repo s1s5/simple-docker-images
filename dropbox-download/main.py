@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import os
 import sys
 from typing import IO, Optional
@@ -9,6 +10,7 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 
 CHUNK_SIZE = 4 << 20
+logger = logging.getLogger()
 
 
 def download_from_dropbox(dbx: dropbox.Dropbox, dbx_path: str, dst_fp: IO[bytes]):
@@ -23,7 +25,11 @@ def main(
     dropbox_token: Optional[str],
     dropbox_token_envvar: Optional[str],
     src_path: str,
+    verbose: bool,
 ):
+    logger.addHandler(logging.StreamHandler(sys.stderr))
+    if verbose:
+        logger.setLevel(logging.DEBUG)
     session = requests.Session()
     adapter = HTTPAdapter(
         pool_connections=8,
@@ -54,6 +60,7 @@ def __entry_point():
     )
     parser.add_argument("-t", "--dropbox-token")
     parser.add_argument("-e", "--dropbox-token-envvar")
+    parser.add_argument("--verbose", action="store_true")
     main(**dict(parser.parse_args()._get_kwargs()))
 
 

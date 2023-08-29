@@ -1,9 +1,12 @@
+import datetime
 import hashlib
 import io
+import logging
 import os
+import random
+import string
 import sys
 from typing import IO, Iterable, Iterator, Optional
-import logging
 
 import dropbox
 import dropbox.files
@@ -52,7 +55,7 @@ class Reader:
         self.content_hash = hashlib.sha256()
 
     def get(self):
-        data = b''
+        data = b""
         for _ in range(self.num_blocks):
             chunk = self.f.read(4 * 1024 * 1024)
             if chunk:
@@ -67,7 +70,13 @@ class Reader:
         return self.content_hash.hexdigest()
 
 
-def upload_to_dropbox(dbx: dropbox.Dropbox, dbx_target_path: str, f, overwrite: bool, upload_blocks: int = 32):
+def upload_to_dropbox(
+    dbx: dropbox.Dropbox,
+    dbx_target_path: str,
+    f,
+    overwrite: bool,
+    upload_blocks: int = 32,
+):
     reader = Reader(f, upload_blocks)
 
     sr = dbx.files_upload_session_start(reader.get())
@@ -86,8 +95,12 @@ def upload_to_dropbox(dbx: dropbox.Dropbox, dbx_target_path: str, f, overwrite: 
         cursor.offset = reader.pos
 
     m = dbx.files_upload_session_finish(b"", cursor, commit)
-    logger.debug("upload completed size=%d, content_hash=%s, %s",
-                 cursor.offset, reader.get_content_hash(), m.content_hash)
+    logger.debug(
+        "upload completed size=%d, content_hash=%s, %s",
+        cursor.offset,
+        reader.get_content_hash(),
+        m.content_hash,
+    )
     if reader.get_content_hash() != m.content_hash:
         print("Error: Content hash not equal")
     return m
@@ -98,12 +111,21 @@ def main(
     dropbox_token: Optional[str],
     dropbox_token_envvar: Optional[str],
     target_path: str,
+    suffix: Optional[str],
     overwrite: bool,
     verbose: bool,
 ):
-    logger.addHandler(logging.StreamHandler(sys.stdout))
+    logger.addHandler(logging.StreamHandler(sys.stderr))
     if verbose:
         logger.setLevel(logging.DEBUG)
+
+    if suffix is not None:
+        rchar = "".join(
+            [random.choice(string.ascii_lowercase + string.digits) for _ in range(4)]
+        )
+        target_path = (
+            f"{target_path}-{datetime.datetime.utcnow():%Y%m%d-%H%M%S}-{rchar}{suffix}"
+        )
 
     session = requests.Session()
     adapter = HTTPAdapter(
@@ -132,7 +154,8 @@ def __entry_point():
     parser.add_argument(
         "-s", "--src-file", type=argparse.FileType("rb"), default=sys.stdin.buffer
     )
-    parser.add_argument("-d", "--target-path")
+    parser.add_argument("-d", "--target-path", required=True)
+    parser.add_argument("--suffix", help="target_pathにタイムスタンプとsuffixを付与したパスをtarget_pathとして使うようにする")
     parser.add_argument("-t", "--dropbox-token")
     parser.add_argument("-e", "--dropbox-token-envvar")
     parser.add_argument("--overwrite", action="store_true")
