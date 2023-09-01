@@ -75,7 +75,7 @@ def upload_to_dropbox(
     dbx_target_path: str,
     f,
     overwrite: bool,
-    upload_blocks: int = 32,
+    upload_blocks: int = 8,
 ):
     reader = Reader(f, upload_blocks)
 
@@ -90,7 +90,9 @@ def upload_to_dropbox(
     logger.debug("uploading to %s, kwargs=%s", dbx_target_path, kwargs)
 
     while chunk := reader.get():
-        logger.debug("uploading chunk pos=%d, %d[bytes]", cursor.offset, len(chunk))
+        logger.debug(
+            "uploading chunk pos=%d, %d[Mb]", cursor.offset, len(chunk) / (1024**2)
+        )
         dbx.files_upload_session_append(chunk, cursor.session_id, cursor.offset)
         cursor.offset = reader.pos
 
@@ -106,6 +108,18 @@ def upload_to_dropbox(
     return m
 
 
+def setup_log(verbose: bool):
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(levelname)s] %(name)s:%(lineno)d %(message)s")
+    )
+    logger.addHandler(handler)
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+
 def main(
     src_file: IO[bytes],
     dropbox_token: Optional[str],
@@ -115,9 +129,7 @@ def main(
     overwrite: bool,
     verbose: bool,
 ):
-    logger.addHandler(logging.StreamHandler(sys.stderr))
-    if verbose:
-        logger.setLevel(logging.DEBUG)
+    setup_log(verbose)
 
     if suffix is not None:
         rchar = "".join(
@@ -155,7 +167,9 @@ def __entry_point():
         "-s", "--src-file", type=argparse.FileType("rb"), default=sys.stdin.buffer
     )
     parser.add_argument("-d", "--target-path", required=True)
-    parser.add_argument("--suffix", help="target_pathにタイムスタンプとsuffixを付与したパスをtarget_pathとして使うようにする")
+    parser.add_argument(
+        "--suffix", help="target_pathにタイムスタンプとsuffixを付与したパスをtarget_pathとして使うようにする"
+    )
     parser.add_argument("-t", "--dropbox-token")
     parser.add_argument("-e", "--dropbox-token-envvar")
     parser.add_argument("--overwrite", action="store_true")
