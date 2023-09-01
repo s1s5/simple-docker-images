@@ -21,7 +21,9 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = []
+dev-dependencies = [
+    "boto3-stubs>=1.28.39",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
