@@ -18,7 +18,7 @@ import boto3
 
 MAX_RETRY = 3
 QueueItem = Optional[Tuple[str, float, IO[bytes]]] | StopIteration
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("s3-download-to-tar")
 
 
 def create_tar(dst_file: IO[bytes], q: Queue[QueueItem]):
@@ -30,7 +30,7 @@ def create_tar(dst_file: IO[bytes], q: Queue[QueueItem]):
             elif isinstance(v, StopIteration):
                 return
             path, mtime, ntf = v
-            logger.debug("path=%s, ntf=%s", path, ntf)
+            logger.debug("path=%s", path)
             with contextlib.closing(ntf), open(ntf.name, "rb") as fp:
                 tf = tarfile.TarInfo(path)
 
@@ -61,11 +61,10 @@ def download_file(
                 continue
 
         logger.debug(
-            "Download completed: bucket=%s, key=%s, dst_path=%s, ntf=%s",
+            "Download completed: bucket=%s, key=%s, dst_path=%s",
             bucket,
             key,
             dst_path,
-            ntf,
         )
         result = (dst_path, mtime, ntf)
     except Exception:
@@ -75,6 +74,18 @@ def download_file(
         result = None
     finally:
         q.put(result)
+
+
+def setup_log(verbose: bool):
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(levelname)s] %(name)s:%(lineno)d %(message)s")
+    )
+    logger.addHandler(handler)
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 
 def main(
@@ -88,10 +99,9 @@ def main(
     dst_file: IO[bytes],
     exclude: List[str],
     verbose: bool,
+    dry_run: bool,
 ):
-    logger.addHandler(logging.StreamHandler(sys.stderr))
-    if verbose:
-        logger.setLevel(logging.DEBUG)
+    setup_log(verbose)
 
     parsed = urllib.parse.urlparse(base_url)
     bucket = parsed.hostname
@@ -136,26 +146,33 @@ def main(
     object_response_paginator = s3.get_paginator("list_objects")
 
     q: Queue[QueueItem] = Queue()
+    total_files, total_bytes = 0, 0
     with ThreadPoolExecutor(max_workers=32) as executor:
-        executor.submit(create_tar, dst_file, q)
+        if not dry_run:
+            executor.submit(create_tar, dst_file, q)
 
         download_tasks = []
-        for object_response_itr in object_response_paginator.paginate(
+        logger.info(
+            "download start bucket=%s, prefix=%s, last_modified>=%s",
+            bucket,
+            prefix,
+            threshold.isoformat(sep=" ", timespec="seconds"),
+        )
+        for obj in object_response_paginator.paginate(
             Bucket=bucket, Prefix=prefix
+        ).search(
+            f"""Contents[?to_string(LastModified)>='"{threshold.isoformat(sep=' ', timespec='seconds')}"'][]"""
         ):
-            for obj in object_response_itr.get("Contents", []):
-                last_modified = obj["LastModified"]
-                if last_modified < threshold:
-                    continue
+            rel_path = os.path.relpath(obj["Key"], start=prefix)
+            if rel_path == "." or any([fnmatch.fnmatch(rel_path, x) for x in exclude]):
+                continue
 
-                rel_path = os.path.relpath(obj["Key"], start=prefix)
-                if rel_path == "." or any(
-                    [fnmatch.fnmatch(rel_path, x) for x in exclude]
-                ):
-                    continue
-                dst_path = tar_path_prefix + rel_path
-                mtime = obj["LastModified"].timestamp()
+            dst_path = tar_path_prefix + rel_path
+            mtime = obj["LastModified"].timestamp()
+            total_files += 1
+            total_bytes += obj["Size"]
 
+            if not dry_run:
                 download_tasks.append(
                     executor.submit(
                         download_file, s3, bucket, obj["Key"], dst_path, mtime, q
@@ -168,7 +185,11 @@ def main(
                 i.result()
         finally:
             q.put(StopIteration())
-        logger.info("download completed. waiting create tar file")
+        logger.info(
+            "download completed %d files, %f.3[Mb]. waiting create tar file",
+            total_files,
+            total_bytes / (1024**2),
+        )
 
 
 def __entry_point():
@@ -183,12 +204,13 @@ def __entry_point():
     parser.add_argument("--aws-secret-access-key")
     parser.add_argument("--region-name")
     parser.add_argument("--endpoint-url")
-    parser.add_argument("--timedelta-hours", type=int, default=100 * 365 * 24)
+    parser.add_argument("--timedelta-hours", type=int, default=30 * 365 * 24)
     parser.add_argument(
         "-d", "--dst-file", type=argparse.FileType("wb"), default=sys.stdout.buffer
     )
     parser.add_argument("--exclude", action="append", default=[])
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
 
     main(**dict(parser.parse_args()._get_kwargs()))
 
