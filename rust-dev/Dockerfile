@@ -1,4 +1,4 @@
-FROM rust:1.69-buster
+FROM rust:1.72-buster
 RUN apt update && apt install -y musl-dev
 
 # install mold:https://github.com/rui314/mold
