@@ -29,16 +29,21 @@ def dump_supergraph(config: str, output: str, olddigest: Optional[str]):
     p.wait()
 
     stdout, _ = p.communicate()
-    digest = hashlib.sha256(stdout).hexdigest()
+    if p.returncode == 0:
+        digest = hashlib.sha256(stdout).hexdigest()
 
-    if digest != olddigest:
-        print(f"digest changed {output} update")
-        with open(output, "wb") as fp:
-            fp.write(stdout)
+        if digest != olddigest:
+            print(f"digest changed {output} update")
+            with open(output, "wb") as fp:
+                fp.write(stdout)
+        else:
+            print(f"no changes found for {output}")
+
     else:
-        print(f"no changes found for {output}")
+        print("something wrong not updated")
+        digest = olddigest or ""
 
-    return digest
+    return p.returncode, digest
 
 
 @click.command()
@@ -58,7 +63,7 @@ def auto_reload(config: str, output: str, poll_ms: int):
         digest = None
 
     while True:
-        digest = dump_supergraph(config, output, olddigest=digest)
+        _code, digest = dump_supergraph(config, output, olddigest=digest)
 
         paths = parse_file(config)
         print(f"watching {paths}")
@@ -68,7 +73,7 @@ def auto_reload(config: str, output: str, poll_ms: int):
             print(f"found changes {changed_paths}. reload={config not in changed_paths}")
             if config in changed_paths:
                 break
-            digest = dump_supergraph(config, output, olddigest=digest)
+            _code, digest = dump_supergraph(config, output, olddigest=digest)
 
 
 if __name__ == "__main__":
