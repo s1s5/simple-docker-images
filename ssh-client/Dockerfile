@@ -1,3 +1,4 @@
+# docker buildx build --platform linux/amd64,linux/arm64 . -t s1s5/ssh-client --push
 FROM debian
 
 RUN apt-get update && apt-get install -y ssh && rm -rf /var/lib/apt/lists/*
