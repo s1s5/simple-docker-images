@@ -1,4 +1,8 @@
-FROM rust:1.72-buster
+# export RUST_VERSION=1.74; docker buildx build --platform linux/amd64,linux/arm64 --build-arg RUST_VERSION=${RUST_VERSION} -t s1s5/rust-dev:${RUST_VERSION} --push .
+
+ARG RUST_VERSION=1.72
+
+FROM rust:${RUST_VERSION}-bullseye
 RUN apt update && apt install -y musl-dev
 
 # install mold:https://github.com/rui314/mold
@@ -36,6 +40,8 @@ RUN chmod +x /tini
 
 ENV RUST_LOG=debug
 ENV RUST_BACKTRACE=full
+ENV CARGO_TERM_COLOR=auto
+ENV CARGO_TERM_PROGRESS_WHEN=never
 
 # mount project/ => /usr/src
 COPY ./entrypoint.sh /entrypoint.sh

@@ -13,4 +13,8 @@ else
     chown -R dev:dev /home/dev
 fi
 
+if [ -e /usr/src/target ]; then
+    chown -R $USER_ID:$GROUP_ID /usr/src/target
+fi
+
 exec gosu dev "$@"
