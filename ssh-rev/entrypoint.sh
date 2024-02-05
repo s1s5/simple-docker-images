@@ -11,4 +11,5 @@ else
     cd /home/$USERNAME
 fi
 
-exec gosu $USERNAME ssh -N -R $SSH_PORT:localhost:22 $SSH_HOST
+echo gosu $USERNAME ssh -N -R $REMOTE_PORT:localhost:$LOCAL_PORT $REMOTE_HOST
+exec gosu $USERNAME ssh -N -R $REMOTE_PORT:localhost:$LOCAL_PORT $REMOTE_HOST

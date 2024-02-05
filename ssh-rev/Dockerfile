@@ -1,4 +1,4 @@
-# docker buildx build --platform linux/amd64,linux/arm64 . -t s1s5/ssh-client --push
+# docker buildx build --platform linux/amd64,linux/arm64 . -t s1s5/ssh-rev --push
 FROM debian
 
 RUN apt-get update && apt-get install -y ssh && rm -rf /var/lib/apt/lists/*
@@ -12,8 +12,9 @@ ENV USERNAME=docker-user
 ENV GROUPNAME=docker-group
 ENV UID=1000
 ENV GID=1000
-ENV SSH_PORT=22022
-ENV SSH_HOST=
+ENV LOCAL_PORT=22
+ENV REMOTE_PORT=22022
+ENV REMOTE_HOST=
 
 COPY ./entrypoint.sh /entrypoint.sh
 COPY ./healthcheck.sh ./healthcheck.sh
