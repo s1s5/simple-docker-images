@@ -6,7 +6,7 @@ set -eu  # <= 0以外が返るものがあったら止まる, 未定義の変数
 
 filename=/tmp/loop-test-`date "+%Y%m%d-%H%M%S"`${RANDOM}${RANDOM}
 echo $filename
-gosu $USERNAME ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p $SSH_HOST" $USERNAME@localhost touch ${filename}
+gosu $USERNAME ssh -p $REMOTE_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p $REMOTE_HOST" $USERNAME@localhost touch ${filename}
 
 if [ -e ${filename} ]; then
     echo "sucess"
