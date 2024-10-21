@@ -1,6 +1,6 @@
 # export RUST_VERSION=1.74; docker buildx build --platform linux/amd64,linux/arm64 --build-arg RUST_VERSION=${RUST_VERSION} -t s1s5/rust-dev:${RUST_VERSION} --push .
 
-ARG RUST_VERSION=1.72
+ARG RUST_VERSION=1.77
 
 FROM rust:${RUST_VERSION}-bullseye
 RUN apt update && apt install -y musl-dev
@@ -15,9 +15,12 @@ RUN cd /tmp && \
 
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y gosu; \
+    apt-get install -y gosu clang-16; \
     rm -rf /var/lib/apt/lists/*; \
     gosu nobody true
+
+RUN ln -s /usr/bin/clang-16 /usr/bin/clang
+RUN ln -s /usr/bin/clang++-16 /usr/bin/clang++
 
 # install packages
 RUN cargo install cargo-watch
@@ -34,7 +37,7 @@ RUN mkdir -p /home/dev/.cargo
 VOLUME /home/dev/.cargo
 WORKDIR /usr/src
 
-ENV TINI_VERSION v0.19.0
+ENV TINI_VERSION=v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
@@ -47,3 +50,4 @@ ENV CARGO_TERM_PROGRESS_WHEN=never
 COPY ./entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/tini", "--", "/entrypoint.sh"]
 CMD ["cargo", "watch", "-x", "fmt", "-s", "mold -run cargo run"]
+

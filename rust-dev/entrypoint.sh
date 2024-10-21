@@ -10,6 +10,10 @@ else
     groupadd -g $GROUP_ID dev
     useradd -m -s /bin/bash -u $USER_ID -g $GROUP_ID dev
 
+    echo "[target.`rustc -vV | grep host | awk '{print $2}'`]" > /home/dev/.cargo/config.toml
+    echo 'linker = "clang"' >> /home/dev/.cargo/config.toml
+    echo 'rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/mold"]' >> /home/dev/.cargo/config.toml
+
     chown -R dev:dev /home/dev
 fi
 
