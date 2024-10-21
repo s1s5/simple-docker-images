@@ -7,9 +7,9 @@ if getent group $GROUPNAME >/dev/null; then
     :
 else
     groupadd -g $GID $GROUPNAME && \
-        useradd -s /bin/bash -u $UID -g $GID $USERNAME -d /home/$USERNAME
+        useradd -s /bin/bash -u $UID -g $GID $USERNAME -d /home/$USERNAME -M
     cd /home/$USERNAME
 fi
 
-echo gosu $USERNAME ssh -N -L $LOCAL_PORT:localhost:$REMOTE_PORT $REMOTE_HOST
-exec gosu $USERNAME ssh -N -L $LOCAL_PORT:localhost:$REMOTE_PORT $REMOTE_HOST
+echo gosu $USERNAME ssh -N -L $LOCAL_HOST:$LOCAL_PORT:localhost:$REMOTE_PORT $REMOTE_HOST
+exec gosu $USERNAME ssh -N -L $LOCAL_HOST:$LOCAL_PORT:localhost:$REMOTE_PORT $REMOTE_HOST
