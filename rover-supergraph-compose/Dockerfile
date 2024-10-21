@@ -1,10 +1,10 @@
-FROM golang:1.18
+FROM golang:1.22
 
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=on
 
 RUN apt update && apt install -y python3-pip
-RUN pip3 install --upgrade pip && pip3 install watchfiles PyYAML click
+RUN rm /usr/lib/python*/EXTERNALLY-MANAGED && pip3 install --upgrade pip && pip3 install watchfiles PyYAML click
 
 ADD https://rover.apollo.dev/nix/latest /opt/
 RUN chmod +x /opt/latest && /bin/sh /opt/latest && cp /root/.rover/bin/rover /bin/rover && chmod 777 /bin/rover

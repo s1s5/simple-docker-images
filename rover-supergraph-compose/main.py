@@ -1,4 +1,5 @@
 import hashlib
+import sys
 import os
 import subprocess
 from typing import Optional
@@ -22,28 +23,26 @@ def parse_file(config_filename: str):
 
 
 def dump_supergraph(config: str, output: str, olddigest: Optional[str]):
-    p = subprocess.Popen(
+    r = subprocess.run(
         ["rover", "supergraph", "compose", "--config", config],
-        stdout=subprocess.PIPE
+        capture_output=True, text=False
     )
-    p.wait()
-
-    stdout, _ = p.communicate()
-    if p.returncode == 0:
-        digest = hashlib.sha256(stdout).hexdigest()
+    print(r.stderr.decode("utf-8"), file=sys.stderr)
+    if r.returncode == 0:
+        digest = hashlib.sha256(r.stdout).hexdigest()
 
         if digest != olddigest:
             print(f"digest changed {output} update")
             with open(output, "wb") as fp:
-                fp.write(stdout)
+                fp.write(r.stdout)
         else:
             print(f"no changes found for {output}")
-
+        returncode = 0
     else:
+        # エラー発生時の処理
         print("something wrong not updated")
         digest = olddigest or ""
-
-    return p.returncode, digest
+    return r.returncode, digest
 
 
 @click.command()
