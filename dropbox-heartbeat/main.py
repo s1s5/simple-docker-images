@@ -5,7 +5,6 @@ import sys
 import time
 from fnmatch import fnmatch
 from typing import Optional
-from urllib.parse import urljoin
 
 import dropbox
 import requests
@@ -15,26 +14,41 @@ from requests.adapters import HTTPAdapter, Retry
 logger = logging.getLogger()
 
 
-def checkpath_and_heartbeat(
-    dbx: dropbox.Dropbox,
-    path: str,
-    heartbeat_url: str,
-    ttl: int,
-):
+def get_latest_file_timestamp(dbx: dropbox.Dropbox, path: str) -> int:
     if path.endswith("/"):
         dirname = path
         xp = "*"
     else:
         dirname, xp = os.path.split(path)
 
-    now = time.time()
+    has_more_files = True # because we haven't queried yet
+    cursor = None # because we haven't queried yet
+
     latest = 0
-    result: ListFolderResult = dbx.files_list_folder(dirname)  # type: ignore
-    for entry in result.entries:
-        logger.debug("entry: %s", entry.path_display)
-        if not fnmatch(os.path.basename(entry.path_display), xp):
-            continue
-        latest = max(latest, entry.server_modified.replace(tzinfo=datetime.timezone.utc).timestamp())
+    while has_more_files:
+        if cursor is None: # if it is our first time querying
+            result: ListFolderResult = dbx.files_list_folder(dirname)  # type: ignore
+        else:
+            result: ListFolderResult = dbx.files_list_folder_continue(cursor)  # type: ignore
+        for entry in result.entries:
+            logger.debug("entry: %s", entry.path_display)
+            if not fnmatch(os.path.basename(entry.path_display), xp):
+                continue
+            latest = max(latest, entry.server_modified.replace(tzinfo=datetime.timezone.utc).timestamp())
+
+        cursor = result.cursor
+        has_more_files = result.has_more
+    return latest
+
+
+def checkpath_and_heartbeat(
+    dbx: dropbox.Dropbox,
+    path: str,
+    heartbeat_url: str,
+    ttl: int,
+):
+    now = time.time()
+    latest = get_latest_file_timestamp(dbx=dbx, path=path)
 
     logger.debug("now=%s, latest=%s, result=%s", now, latest, latest + ttl > now)
     if latest + ttl > now:
