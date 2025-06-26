@@ -1,6 +1,6 @@
 # export RUST_VERSION=1.74; docker buildx build --platform linux/amd64,linux/arm64 --build-arg RUST_VERSION=${RUST_VERSION} -t s1s5/rust-dev:${RUST_VERSION} --push .
 
-ARG RUST_VERSION=1.77
+ARG RUST_VERSION=1.86
 
 FROM rust:${RUST_VERSION}-bullseye
 RUN apt update && apt install -y musl-dev
@@ -24,8 +24,8 @@ RUN ln -s /usr/bin/clang++-16 /usr/bin/clang++
 
 # install packages
 RUN cargo install cargo-watch
-RUN cargo install sea-orm-cli
-RUN rustup component add rustfmt
+# RUN cargo install sea-orm-cli
+RUN rustup component add rustfmt clippy
 
 # usr for dev
 ENV USER_ID=1000
@@ -47,7 +47,11 @@ ENV CARGO_TERM_COLOR=auto
 ENV CARGO_TERM_PROGRESS_WHEN=never
 
 # mount project/ => /usr/src
-COPY ./entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/tini", "--", "/entrypoint.sh"]
-CMD ["cargo", "watch", "-x", "fmt", "-s", "mold -run cargo run"]
+# COPY ./entrypoint.sh /entrypoint.sh
+# ENTRYPOINT ["/tini", "--", "/entrypoint.sh"]
+# CMD ["cargo", "watch", "-x", "fmt", "-s", "mold -run cargo run"]
 
+ENV CARGO_HOME=/opt/cargo
+RUN mkdir -p /opt/cargo && chmod 1777 /opt/cargo
+VOLUME /opt/cargo
+ENTRYPOINT ["/tini", "--"]
