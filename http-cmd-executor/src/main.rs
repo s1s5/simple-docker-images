@@ -217,8 +217,9 @@ async fn execute_cmd(cmd_config: Cmd, temp_dir: &Path) -> Result<()> {
 
     if !output.status.success() {
         Err(anyhow::anyhow!(
-            "Main command failed with exit code {:?}",
-            output.status.code()
+            "Main command failed with exit code {:?}. cmd={:?}",
+            output.status.code(),
+            cmd_config
         ))?;
     }
 
