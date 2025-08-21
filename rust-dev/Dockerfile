@@ -1,4 +1,4 @@
-# export RUST_VERSION=1.74; docker buildx build --platform linux/amd64,linux/arm64 --build-arg RUST_VERSION=${RUST_VERSION} -t s1s5/rust-dev:${RUST_VERSION} --push .
+# export RUST_VERSION=1.86; docker buildx build --platform linux/amd64,linux/arm64 --build-arg RUST_VERSION=${RUST_VERSION} -t s1s5/rust-dev:${RUST_VERSION} --push .
 
 ARG RUST_VERSION=1.86
 
@@ -6,7 +6,7 @@ FROM rust:${RUST_VERSION}-bullseye
 RUN apt update && apt install -y musl-dev
 
 # install mold:https://github.com/rui314/mold
-ENV mold_version=1.10.1
+ENV mold_version=2.40.2
 RUN cd /tmp && \
     wget https://github.com/rui314/mold/releases/download/v${mold_version}/mold-${mold_version}-x86_64-linux.tar.gz && \
     tar zxf mold-${mold_version}-x86_64-linux.tar.gz && \
@@ -41,6 +41,8 @@ ENV TINI_VERSION=v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER="clang"
+ENV RUSTFLAGS="-C link-arg=-fuse-ld=/usr/local/bin/mold"
 ENV RUST_LOG=debug
 ENV RUST_BACKTRACE=full
 ENV CARGO_TERM_COLOR=auto
