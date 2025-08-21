@@ -1,8 +1,8 @@
 import hashlib
-import sys
 import os
 import subprocess
-from typing import Optional
+import sys
+from typing import Optional, Tuple
 
 import click
 import watchfiles
@@ -22,10 +22,9 @@ def parse_file(config_filename: str):
     return result
 
 
-def dump_supergraph(config: str, output: str, olddigest: Optional[str]):
+def dump_supergraph(config: str, output: Tuple[str, ...], olddigest: Optional[str]):
     r = subprocess.run(
-        ["rover", "supergraph", "compose", "--config", config],
-        capture_output=True, text=False
+        ["rover", "supergraph", "compose", "--config", config], capture_output=True, text=False
     )
     print(r.stderr.decode("utf-8"), file=sys.stderr)
     if r.returncode == 0:
@@ -33,8 +32,9 @@ def dump_supergraph(config: str, output: str, olddigest: Optional[str]):
 
         if digest != olddigest:
             print(f"digest changed {output} update")
-            with open(output, "wb") as fp:
-                fp.write(r.stdout)
+            for o in output:
+                with open(o, "wb") as fp:
+                    fp.write(r.stdout)
         else:
             print(f"no changes found for {output}")
         returncode = 0
@@ -47,19 +47,19 @@ def dump_supergraph(config: str, output: str, olddigest: Optional[str]):
 
 @click.command()
 @click.option("--config", help="config path")
-@click.option("--output", help="output path")
+@click.option("--output", multiple=True, help="output path(s)")
 @click.option("--poll-ms", help="poll ms", type=int, default=0)
-def auto_reload(config: str, output: str, poll_ms: int):
+def auto_reload(config: str, output: Tuple[str, ...], poll_ms: int):
     kwargs = {}
     if poll_ms > 0:
         kwargs["rust_timeout"] = poll_ms
         kwargs["yield_on_timeout"] = True
 
-    if os.path.exists(output):
-        with open(output, "rb") as fp:
-            digest = hashlib.sha256(fp.read()).hexdigest()
-    else:
-        digest = None
+    digest = None
+    for o in output:
+        if os.path.exists(o):
+            with open(o, "rb") as fp:
+                digest = hashlib.sha256(fp.read()).hexdigest()
 
     while True:
         _code, digest = dump_supergraph(config, output, olddigest=digest)

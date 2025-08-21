@@ -13,7 +13,7 @@ WORKDIR /opt
 COPY main.py ./
 
 RUN mkdir -p /home && chmod 1777 /home
-ENV HOME /home
+ENV HOME=/home
 VOLUME /home
 
 ENTRYPOINT ["python3", "main.py"]
