@@ -49,7 +49,7 @@ fn upload_file(
         &files::UploadSessionStartArg::default()
             .with_session_type(files::UploadSessionType::Sequential),
         &[],
-    )??
+    )?
     .session_id;
 
     info!("upload session ID is {session_id}");
@@ -96,12 +96,12 @@ fn upload_file(
     let mut retry = 0;
     while retry < 3 {
         match files::upload_session_finish(&client, &commit_arg, &[]) {
-            Ok(Ok(file_metadata)) => {
+            Ok(file_metadata) => {
                 info!("Upload succeeded!");
                 info!("{:#?}", file_metadata);
                 break;
             }
-            Ok(Err(dropbox_sdk::files::UploadSessionFinishError::Path(
+            Err(dropbox_sdk::Error::Api(dropbox_sdk::files::UploadSessionFinishError::Path(
                 dropbox_sdk::files::WriteError::Conflict(p),
             ))) => {
                 error!("Error finishing upload: Write Conflict {p:?}");
@@ -128,7 +128,7 @@ fn upload_block_with_retry(
     let mut errors = 0;
     loop {
         match files::upload_session_append_v2(client, &arg, buf) {
-            Ok(Ok(())) => break,
+            Ok(_) => break,
             Err(dropbox_sdk::Error::RateLimited {
                 reason,
                 retry_after_seconds,
