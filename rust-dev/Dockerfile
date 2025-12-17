@@ -1,4 +1,5 @@
 # export RUST_VERSION=1.86; docker buildx build --platform linux/amd64,linux/arm64 --build-arg RUST_VERSION=${RUST_VERSION} -t s1s5/rust-dev:${RUST_VERSION} --push .
+# export RUST_VERSION=1.86; docker build --build-arg RUST_VERSION=${RUST_VERSION} -t s1s5/rust-dev:${RUST_VERSION} --push .
 
 ARG RUST_VERSION=1.86
 
