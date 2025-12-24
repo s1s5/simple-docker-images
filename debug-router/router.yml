@@ -1,0 +1,50 @@
+supergraph:
+  listen: 0.0.0.0:4000
+  introspection: true
+
+include_subgraph_errors:
+  all: true
+
+sandbox:
+  enabled: true
+
+homepage:
+  enabled: false
+
+headers:
+  all:
+    request:
+      - propagate:
+          named: authorization
+      - propagate:
+          named: x-request-id
+      - propagate:
+          named: x-sentry-transaction-id
+
+telemetry:
+  tracing:
+    trace_config:
+      service_name: "apollo.router"
+      service_namespace: "apollo"
+    propagation:
+      trace_context: true
+    otlp:
+      batch_processor:
+        scheduled_delay: 10ms
+      endpoint: http://opentelemetry-collector:4317
+
+cors:
+  allow_any_origin: true
+  expose_headers:
+    - x-otel-trace-id
+
+rhai:
+  scripts: "/opt/scripts"
+  main: "main.rhai"
+
+traffic_shaping:
+  router:
+    timeout: 3000s
+  subgraphs:
+    products:
+      timeout: 2300s
