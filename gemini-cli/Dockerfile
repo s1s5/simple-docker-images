@@ -6,7 +6,7 @@ RUN npx playwright install-deps
 RUN npm install -g @google/gemini-cli
 
 RUN apt update \
-    && apt install -y build-essential clang lld pkg-config libssl-dev \
+    && apt install -y build-essential clang lld pkg-config libssl-dev git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
