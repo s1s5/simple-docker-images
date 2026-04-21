@@ -9,3 +9,4 @@ RUN apt-get update && \
     apt-get clean
 
 RUN pip install --no-cache-dir watchfiles
+RUN npm i -g pnpm
