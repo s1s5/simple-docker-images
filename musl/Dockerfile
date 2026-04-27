@@ -8,7 +8,7 @@ FROM clux/muslrust:${TAG:-1.85.1-stable-2025-03-29}
 # - sccache: ビルドキャッシュ
 # ==========================================================
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates \
+    curl ca-certificates xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # ==========================================================
@@ -22,8 +22,8 @@ ENV SCCACHE_VERSION=v0.12.0
 RUN curl -L https://github.com/mozilla/sccache/releases/download/${SCCACHE_VERSION}/sccache-${SCCACHE_VERSION}-x86_64-unknown-linux-musl.tar.gz \
     | tar xz && mv sccache-*/sccache /usr/local/bin/sccache && chmod +x /usr/local/bin/sccache && rm -rf sccache-*
 
-RUN curl -L https://github.com/LukeMathWalker/cargo-chef/releases/latest/download/cargo-chef-x86_64-unknown-linux-musl.tar.gz \
-    | tar xz && mv cargo-chef /usr/local/bin/cargo-chef && chmod +x /usr/local/bin/cargo-chef
+RUN curl -L https://github.com/LukeMathWalker/cargo-chef/releases/latest/download/cargo-chef-x86_64-unknown-linux-musl.tar.xz \
+    | tar xJ && mv cargo-chef-x86_64-unknown-linux-musl/cargo-chef /usr/local/bin/cargo-chef && chmod +x /usr/local/bin/cargo-chef
 
 # ==========================================================
 # 3. sccache の設定
